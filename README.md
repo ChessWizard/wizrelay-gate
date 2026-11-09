@@ -2,10 +2,14 @@
 **English** &nbsp;·&nbsp; [Türkçe](README.tr.md)
 <!-- /lang -->
 
-# wizrelay-gate
+# <img src="docs/assets/icon.png" alt="" width="34" align="top"> wizrelay-gate
 
 A local-first dashboard that runs a [wizrelay](https://github.com/ChessWizard/wizrelay)
 task as a pipeline of **task quality gates**.
+
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%E2%89%A5%2020.9-339933.svg)](package.json)
+[![Next.js](https://img.shields.io/badge/Next.js-16.4.5-000000.svg)](package.json)
 
 wizrelay is a Claude Code plugin: it carries a researcher's task analysis from one team
 hub into every developer's AI coding session and enforces it deterministically. It is

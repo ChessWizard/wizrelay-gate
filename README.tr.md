@@ -2,10 +2,14 @@
 [English](README.md) &nbsp;·&nbsp; **Türkçe**
 <!-- /lang -->
 
-# wizrelay-gate
+# <img src="docs/assets/icon.png" alt="" width="34" align="top"> wizrelay-gate
 
 Bir [wizrelay](https://github.com/ChessWizard/wizrelay) task'ını **task kalite
 kapılarından** oluşan bir pipeline olarak çalıştıran, yerelde çalışan pano.
+
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%E2%89%A5%2020.9-339933.svg)](package.json)
+[![Next.js](https://img.shields.io/badge/Next.js-16.4.5-000000.svg)](package.json)
 
 wizrelay bir Claude Code plugin'idir: bir researcher'ın task analizini tek bir ekip
 hub'ından her geliştiricinin AI kodlama oturumuna taşır ve deterministik biçimde uygular.

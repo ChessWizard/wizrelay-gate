@@ -75,6 +75,31 @@ docker compose up -d
 Tek servis; yanında çalıştırılacak ayrı bir veritabanı servisi yok. `.env` parola taşır —
 dosyayı kimse okuyamayacak şekilde bırakın (`chmod 600 .env`) ve sürüm kontrolüne koymayın.
 
+## İlk owner
+
+`OWNER_EMAIL` ve `OWNER_PASSWORD` yalnızca ilk açılışta, veritabanında hiç kullanıcı
+yokken okunur. Hesap bir kez oluştuktan sonra bu değişkenlere bir daha bakılmaz —
+parolayı değiştirmek `.env`'i düzenlemekle olmaz, panelden yapılır.
+
+**İkisinden biri boşsa hesap hiç oluşmaz.** Panel yine açılır ve sağlık kontrolünü de
+geçer, ama içeride hiç kullanıcı olmadığı için giriş ekranında kimse ilerleyemez.
+Kurtarmak kolaydır: değişkenleri verip yeniden başlatın. Hâlâ tek kullanıcı bile
+olmadığı için hesap o açılışta oluşur; birimi silmeniz gerekmez.
+
+### `.env` içindeki `$` parolayı sessizce kırpar
+
+Compose, `.env` içinde gördüğü `$` işaretini bir değişken başlangıcı sayar. `ab$cd-ef`
+yazarsanız container'a ulaşan değer `ab-ef` olur: `$cd` tanımsız olduğu için boşa
+çevrilir. Uyarı çıkmaz ve tırnak işareti kurtarmaz. Panel sorunsuz kurulur, parola
+çalışmaz ve sebebi hiçbir yerde görünmez.
+
+| Nereye yazıyorsanız | Nasıl |
+|---|---|
+| `.env` | `$` işaretini ikileyin: `ab$$cd-ef` container'a `ab$cd-ef` olarak gider. |
+| `docker run -e` | Tek `$` olduğu gibi geçer. Kabuk dokunmasın diye tek tırnak kullanın. |
+
+En temizi parolada `$` kullanmamaktır; güvenliği uzunluk sağlar, noktalama değil.
+
 ## Hangi sürümü çekmeli
 
 | Etiket | Ne demek |
@@ -107,7 +132,7 @@ derleyin.
 |---|---|
 | `DATABASE_URL` | Kendi PostgreSQL'iniz. Boş bırakırsanız gömülü olan kullanılır. |
 | `AUTH_SECRET` | Oturumları imzalar, saklanan ClickUp ve GitHub token'larını şifreler. Verilmezse birime üretilir. |
-| `OWNER_EMAIL`, `OWNER_PASSWORD` | İlk owner; yalnızca ilk açılışta oluşturulur. |
+| `OWNER_EMAIL`, `OWNER_PASSWORD` | İlk owner; yalnızca ilk açılışta oluşturulur. Boş bırakılırsa kimse giremez — [İlk owner](#ilk-owner). |
 | `PANEL_NAME`, `PANEL_LOGO_URL`, `PANEL_FAVICON_URL`, `PANEL_ACCENT` | Markalama. Owner her birini panelden değiştirebilir. |
 | `WIZRELAY_GATE_HOME` | Hub kopyaları, kapı kayıtları ve marka dosyalarının yeri. Container içinde `/data`. |
 | `WIZRELAY_GATE_EXECUTION` | `agent`, `local` ya da `auto`. Aşağıya bakın. |

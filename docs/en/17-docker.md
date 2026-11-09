@@ -75,6 +75,32 @@ docker compose up -d
 One service, no database service to run beside it. `.env` carries a password — leave it
 unreadable to anybody else (`chmod 600 .env`) and keep it out of version control.
 
+## The first owner
+
+`OWNER_EMAIL` and `OWNER_PASSWORD` are read on the first boot only, while no user exists
+in the database. Once the account is there the variables are never looked at again —
+changing the password is not an edit to `.env`, it is done in the panel.
+
+**Leave either one empty and no account is created.** The panel still starts and still
+passes its health check, but nobody gets past the login screen, because there is no user
+inside. Recovery is easy: set the variables and start it again. There is still not one
+user, so the account is created on that boot. You do not have to delete the volume.
+
+### A `$` in `.env` quietly truncates the password
+
+Compose reads a `$` in `.env` as the start of a variable. Write `ab$cd-ef` and the value
+that reaches the container is `ab-ef`: `$cd` is undefined, so it becomes nothing. There is
+no warning, and quoting does not help. The panel installs cleanly, the password does not
+work, and nothing says why.
+
+| Where you write it | How |
+|---|---|
+| `.env` | Double the `$`: `ab$$cd-ef` reaches the container as `ab$cd-ef`. |
+| `docker run -e` | A single `$` passes through. Single-quote it so the shell leaves it alone. |
+
+The cleanest answer is a password with no `$` in it. Length is what makes it safe, not
+punctuation.
+
 ## Which tag to pull
 
 | Tag | What it means |
@@ -107,7 +133,7 @@ entirely.
 |---|---|
 | `DATABASE_URL` | Your own PostgreSQL. Leave it unset to use the built-in one. |
 | `AUTH_SECRET` | Signs sessions and encrypts stored ClickUp and GitHub tokens. Generated onto the volume when unset. |
-| `OWNER_EMAIL`, `OWNER_PASSWORD` | The first owner, created on first boot only. |
+| `OWNER_EMAIL`, `OWNER_PASSWORD` | The first owner, created on first boot only. Leave either empty and nobody can sign in — [The first owner](#the-first-owner). |
 | `PANEL_NAME`, `PANEL_LOGO_URL`, `PANEL_FAVICON_URL`, `PANEL_ACCENT` | Branding. The owner can override each in the panel. |
 | `WIZRELAY_GATE_HOME` | Where hub clones, gate logs and the branding files live. `/data` in the container. |
 | `WIZRELAY_GATE_EXECUTION` | `agent`, `local` or `auto`. See below. |
