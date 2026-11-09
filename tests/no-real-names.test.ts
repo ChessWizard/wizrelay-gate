@@ -51,7 +51,7 @@ function textFiles(): string[] {
     .split('\n')
     .filter(Boolean)
     .filter((path) => !path.endsWith('package-lock.json'))
-    .filter((path) => !/\.(png|jpe?g|ico|webp|woff2?|gz|zip|pdf)$/i.test(path));
+    .filter((path) => !/\.(png|jpe?g|gif|ico|webp|woff2?|mp4|mov|webm|gz|zip|pdf)$/i.test(path));
 }
 
 /**

@@ -11,6 +11,8 @@ kapılarından** oluşan bir pipeline olarak çalıştıran, yerelde çalışan 
 [![Node](https://img.shields.io/badge/node-%E2%89%A5%2020.9-339933.svg)](package.json)
 [![Next.js](https://img.shields.io/badge/Next.js-16.4.5-000000.svg)](package.json)
 
+![Panelin 30 saniyelik tanıtımı](docs/assets/wizrelay-gate-tr.gif)
+
 wizrelay bir Claude Code plugin'idir: bir researcher'ın task analizini tek bir ekip
 hub'ından her geliştiricinin AI kodlama oturumuna taşır ve deterministik biçimde uygular.
 Terminaldeki slash komutlarıyla sürülür.

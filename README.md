@@ -11,6 +11,8 @@ task as a pipeline of **task quality gates**.
 [![Node](https://img.shields.io/badge/node-%E2%89%A5%2020.9-339933.svg)](package.json)
 [![Next.js](https://img.shields.io/badge/Next.js-16.4.5-000000.svg)](package.json)
 
+![A 30-second tour of the panel](docs/assets/wizrelay-gate-en.gif)
+
 wizrelay is a Claude Code plugin: it carries a researcher's task analysis from one team
 hub into every developer's AI coding session and enforces it deterministically. It is
 driven from slash commands in a terminal.
