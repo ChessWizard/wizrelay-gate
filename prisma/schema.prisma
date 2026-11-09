@@ -1,0 +1,369 @@
+// wizrelay-gate — the panel's own records.
+//
+// Only what the panel itself owns lives here: who may sign in, what they may reach, and
+// what they did. Package contents, task text, diffs and commits stay where they already
+// are — the hub repository, ClickUp and GitHub — and are read live.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GlobalRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ProjectRole {
+  RESEARCHER
+  DEVELOPER
+}
+
+enum ConnectionKind {
+  CLAUDE
+  GITHUB
+  CLICKUP
+}
+
+enum ActivityKind {
+  GATE_RUN
+  PROMPT_ANSWERED
+  PACKAGE_PUBLISHED
+  QUESTION_ASKED
+  QUESTION_ANSWERED
+  MEMBER_ADDED
+  MEMBER_ROLE_CHANGED
+  PROJECT_ADDED
+  PROJECT_REMOVED
+  HUB_ADDED
+  HUB_REMOVED
+  MEMBER_REMOVED
+  SIGNED_IN
+}
+
+enum AgentJobState {
+  QUEUED
+  CLAIMED
+  DONE
+  FAILED
+  EXPIRED
+}
+
+enum InboxKind {
+  QUESTION
+  RESEARCH_READY
+  MENTION
+}
+
+/// The panel's own settings. Exactly one row, created by the owner at setup.
+model Panel {
+  id            String    @id @default("panel")
+  name          String?
+  /// The line under the title on the sign-in screen. The default says the panel is invite
+  /// only, which is true and tells a newcomer nothing about what they are signing in to.
+  description   String?
+  logoUrl       String?
+  faviconUrl    String?
+  /// A file in the panel's branding directory, uploaded here or mounted by the operator.
+  logoFile      String?
+  faviconFile   String?
+  /// Bumped on every upload so a cached image is replaced the moment it changes.
+  brandVersion  Int       @default(0)
+  locale        String    @default("en")
+  direction     String    @default("a")
+  theme         String    @default("dark")
+  initializedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+/// Someone who may sign in. Created only by an owner or an admin.
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  name          String
+  /// The Claude account this person signs in to Claude Code with.
+  claudeRef     String?    @unique
+  passwordHash  String?
+  /// When this person last chose their own password. Null means the one they have was
+  /// handed to them — the environment's owner password — and is still in use.
+  passwordSetAt DateTime?
+  inviteToken   String?    @unique
+  inviteSentAt  DateTime?
+  globalRole    GlobalRole @default(MEMBER)
+  disabled      Boolean    @default(false)
+  locale        String?
+  createdAt     DateTime   @default(now())
+  lastLoginAt   DateTime?
+
+  sessions      Session[]
+  memberships   Membership[]
+  connections   Connection[]
+  activities    Activity[]
+  inbox         InboxItem[]
+  leadOfProject Project[]      @relation("ResearchLead")
+  agents        Agent[]
+  autoApprovals AutoApproval[]
+  pairings      AgentPairing[]
+
+  @@index([globalRole])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// A research hub repository. A team may have more than one.
+model Hub {
+  id            String    @id @default(cuid())
+  name          String
+  url           String    @unique
+  branch        String    @default("main")
+  /// A working copy on the server, when the operator mounted one instead of cloning.
+  localPath     String?
+  trackerType   String?
+  trackerPrefix String?
+  /// When the panel's own clone last caught up with the remote.
+  fetchedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  projects   Project[]
+  activities Activity[]
+}
+
+/// A repository bound to one of its hub's roles.
+model Project {
+  id             String   @id @default(cuid())
+  hubId          String
+  /// The hub role this repository plays, from wizrelay-hub.json.
+  role           String
+  name           String
+  repoUrl        String?
+  localPath      String?
+  baseRef        String   @default("origin/main")
+  /// Who an unanswered research question goes to. Defaults to the owner.
+  researchLeadId String?
+  createdAt      DateTime @default(now())
+
+  hub          Hub          @relation(fields: [hubId], references: [id], onDelete: Cascade)
+  researchLead User?        @relation("ResearchLead", fields: [researchLeadId], references: [id], onDelete: SetNull)
+  memberships  Membership[]
+  activities   Activity[]
+  inbox        InboxItem[]
+
+  @@unique([hubId, role])
+  @@index([hubId])
+}
+
+/// What one person may do in one project.
+model Membership {
+  id        String        @id @default(cuid())
+  userId    String
+  projectId String
+  roles     ProjectRole[]
+  createdAt DateTime      @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([projectId])
+}
+
+/// A person's own external account. The secret is encrypted with the server key.
+model Connection {
+  id          String         @id @default(cuid())
+  userId      String
+  kind        ConnectionKind
+  label       String?
+  externalId  String?
+  secretEnc   String?
+  connectedAt DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind])
+}
+
+/// Who did what, and where. Read back filtered by what the reader may reach.
+model Activity {
+  id        String       @id @default(cuid())
+  kind      ActivityKind
+  userId    String?
+  projectId String?
+  hubId     String?
+  relayId   String?
+  gate      String?
+  summary   String
+  meta      Json?
+  at        DateTime     @default(now())
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  hub     Hub?     @relation(fields: [hubId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, at])
+  @@index([userId, at])
+  @@index([at])
+}
+
+/// Something waiting for one person. Read on page load; there is no push channel.
+model InboxItem {
+  id        String    @id @default(cuid())
+  userId    String
+  projectId String?
+  kind      InboxKind
+  relayId   String?
+  title     String
+  body      String?
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+/// A machine somebody paired with this panel.
+///
+/// The panel does not run gates any more — it asks the agent on the right person's
+/// machine to run them, in their own checkouts, with their own git identity and their own
+/// Claude session. One person may pair several machines; a job goes to whichever of theirs
+/// is online and has the working copy the gate needs.
+model Agent {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  /// HMAC of the bearer token the agent presents. The token itself is shown once.
+  tokenHash   String    @unique
+  hostname    String?
+  platform    String?
+  version     String?
+  protocol    Int       @default(1)
+  /// What the machine reported last: the working copies it will run in, which binaries it
+  /// found, and the Claude account it is signed in to.
+  repos       Json?
+  binaries    Json?
+  claudeEmail String?
+  claudeName  String?
+  lastSeenAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs AgentJob[]
+
+  @@index([userId])
+  @@index([lastSeenAt])
+}
+
+/// A one-time code the panel shows so a machine can introduce itself. Ten minutes, once.
+model AgentPairing {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String    @unique
+  label     String?
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// One command, waiting for the machine that will run it.
+///
+/// The result comes back here rather than over a socket because the panel may be several
+/// worker processes and the person who started the gate may be reading it from another
+/// one. A row both sides can see is the only channel that survives that.
+model AgentJob {
+  id        String        @id @default(cuid())
+  agentId   String
+  state     AgentJobState @default(QUEUED)
+  kind      String
+  binary    String
+  args      Json
+  cwd       String?
+  /// For a read or a write: the file, absolute, inside a declared working copy.
+  path      String?
+  /// For a write: the whole new contents.
+  body      String?
+  command   String
+  timeoutMs Int           @default(300000)
+  relayId   String?
+  gate      String?
+  role      String?
+  exitCode  Int?
+  stdout    String?
+  stderr    String?
+  timedOut  Boolean       @default(false)
+  error     String?
+  createdAt DateTime      @default(now())
+  claimedAt DateTime?
+  endedAt   DateTime?
+
+  agent  Agent           @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  chunks AgentJobChunk[]
+
+  @@index([agentId, state])
+  @@index([createdAt])
+}
+
+/// One line of a streamed job, kept in order so the console replays it exactly.
+model AgentJobChunk {
+  id     String @id @default(cuid())
+  jobId  String
+  seq    Int
+  stream String
+  line   String
+
+  job AgentJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, seq])
+  @@index([jobId])
+}
+
+/// Whose session stops asking before a commit or a push.
+///
+/// The default is always to ask: a commit and a push leave the machine and carry a
+/// person's name, and a pipeline that does both unattended is a pipeline nobody is
+/// accountable for. Somebody who runs the same flow twenty times a day can switch that
+/// off — for one relay or for all of theirs — and it applies to them alone. There is no
+/// setting here that lets one person stop another being asked.
+model AutoApproval {
+  id        String   @id @default(cuid())
+  userId    String
+  /// An empty string means every relay of this person's; a value means only that one.
+  /// Not nullable, because in SQL two NULLs are never equal and the unique constraint
+  /// below would then allow a person two different blanket rules at once.
+  relayId   String   @default("")
+  /// What they chose to stop being asked about.
+  commits   Boolean  @default(true)
+  pushes    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, relayId])
+  @@index([userId])
+}

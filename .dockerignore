@@ -1,0 +1,23 @@
+# Build output and dependencies are produced inside the image.
+node_modules
+.next
+.next-verify
+out
+
+# Local state: the connected workspace, the relays, the gate logs, the hub clone.
+.wizrelay-gate
+
+# Nothing here belongs in a runtime image.
+.git
+.github
+.claude
+.idea
+.vscode
+docs
+tests
+coverage
+*.log
+*.tsbuildinfo
+.DS_Store
+.env
+.env.*

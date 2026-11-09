@@ -1,0 +1,41 @@
+# wizrelay-gate — one container, batteries included.
+#
+# The image carries its own PostgreSQL, so this file needs nothing but a port and a
+# volume. A team that already runs Postgres sets DATABASE_URL and the built-in one is
+# never started; docs/en/17-docker.md has that variant.
+services:
+  gate:
+    image: ${WIZRELAY_GATE_IMAGE:-wizrelay/gate:latest}
+    build:
+      context: .
+      args:
+        WIZRELAY_SPEC: ${WIZRELAY_SPEC:-git+https://github.com/ChessWizard/wizrelay@main}
+        INSTALL_CLAUDE_CODE: ${INSTALL_CLAUDE_CODE:-false}
+    restart: unless-stopped
+    ports:
+      - '${PORT:-3100}:3100'
+    environment:
+      # Left empty on purpose: the container then runs its own database on /data.
+      DATABASE_URL: ${DATABASE_URL:-}
+      # Generated on first boot and kept on the volume when this is empty.
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      OWNER_EMAIL: ${OWNER_EMAIL:-}
+      OWNER_NAME: ${OWNER_NAME:-}
+      OWNER_PASSWORD: ${OWNER_PASSWORD:-}
+      PANEL_NAME: ${PANEL_NAME:-wizrelay-gate}
+      PANEL_DESCRIPTION: ${PANEL_DESCRIPTION:-}
+      PANEL_ACCENT: ${PANEL_ACCENT:-}
+      PANEL_LOGO_URL: ${PANEL_LOGO_URL:-}
+      PANEL_FAVICON_URL: ${PANEL_FAVICON_URL:-}
+      CLICKUP_API_TOKEN: ${CLICKUP_API_TOKEN:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      WIZRELAY_GATE_HOME: /data
+      # A panel the team shares has none of their checkouts: gates run on the machine of
+      # whoever started them, through the agent they paired.
+      WIZRELAY_GATE_EXECUTION: ${WIZRELAY_GATE_EXECUTION:-agent}
+      WIZRELAY_GATE_URL: ${WIZRELAY_GATE_URL:-}
+    volumes:
+      - gate-data:/data
+
+volumes:
+  gate-data:

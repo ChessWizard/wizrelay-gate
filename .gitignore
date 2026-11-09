@@ -1,0 +1,31 @@
+# Next.js
+/.next/
+/out/
+next-env.d.ts
+
+# Dependencies
+/node_modules/
+.pnp
+.pnp.js
+
+# Local state: the workspace the user connected, and the runs the gates produced
+/.wizrelay-gate/
+
+# Test and build output
+/coverage/
+*.tsbuildinfo
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Prisma client, generated at install time.
+src/generated/
+.next-verify/
